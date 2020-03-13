@@ -1,0 +1,194 @@
+version: build-{build}
+
+image:
+  # - Ubuntu
+  # - macOS
+  - Visual Studio 2019
+  - Visual Studio 2015
+
+for:
+  # # Ubuntu
+  # -
+  #   matrix:
+  #     only:
+  #       - image: Ubuntu
+
+  #   clone_folder: ~/pigz
+
+  #   clone_depth: 1
+
+  #   init:
+  #     - ps: >-
+  #         $env:DATE = $(Get-Date -Format d-MMM-yyyy)
+
+  #         $githash = $env:APPVEYOR_REPO_COMMIT.Substring(0, 7)
+
+  #         $gittag = if ($env:APPVEYOR_REPO_TAG -eq $True) {"_$($env:APPVEYOR_REPO_TAG_NAME)"} else {""}
+
+  #         Update-AppveyorBuild -Version "$($env:DATE)_g${githash}${gittag}"
+
+  #         $env:release_version = $(Get-Date -Format d-MMMM-yyyy)
+
+  #   build_script:
+  #     - cmd: >-
+  #         echo "Running cmake"
+
+  #         mkdir c:\projects\pigz\build
+
+  #         cd c:\projects\pigz\build
+
+  #         cmake -Wno-dev -G "Visual Studio 16 2019 Win64" ..\
+
+  #         cmake --build . --config Release
+
+  # # macOS
+  # -
+  #   matrix:
+  #     only:
+  #       - image: macOS
+
+  #   clone_folder: ~/pigz
+
+  #   clone_depth: 1
+
+  #   init:
+  #     - ps: >-
+  #         $env:DATE = $(Get-Date -Format d-MMM-yyyy)
+
+  #         $githash = $env:APPVEYOR_REPO_COMMIT.Substring(0, 7)
+
+  #         $gittag = if ($env:APPVEYOR_REPO_TAG -eq $True) {"_$($env:APPVEYOR_REPO_TAG_NAME)"} else {""}
+
+  #         Update-AppveyorBuild -Version "$($env:DATE)_g${githash}${gittag}"
+
+  #         $env:release_version = $(Get-Date -Format d-MMMM-yyyy)
+
+  #   build_script:
+  #     - cmd: >-
+  #         echo "Running cmake"
+
+  #         mkdir c:\projects\pigz\build
+
+  #         cd c:\projects\pigz\build
+
+  #         cmake -Wno-dev -G "Visual Studio 16 2019 Win64" ..\
+
+  #         cmake --build . --config Release
+
+  # Windows (MSVC)
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2019
+
+    clone_folder: c:\projects\pigz
+
+    clone_depth: 1
+
+    init:
+      - ps: >-
+          $env:DATE = $(Get-Date -Format d-MMM-yyyy)
+
+          $githash = $env:APPVEYOR_REPO_COMMIT.Substring(0, 7)
+
+          $gittag = if ($env:APPVEYOR_REPO_TAG -eq $True) {"_$($env:APPVEYOR_REPO_TAG_NAME)"} else {""}
+
+          Update-AppveyorBuild -Version "$($env:DATE)_g${githash}${gittag}"
+
+          $env:release_version = $(Get-Date -Format d-MMMM-yyyy)
+
+    build_script:
+      - cmd: >-
+          echo "Running cmake"
+
+          mkdir c:\projects\pigz\build
+
+          cd c:\projects\pigz\build
+
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+
+          cmake -Wno-dev -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..\
+
+          cmake --build .
+
+    artifacts:
+      - path: build/bin/pigz.exe
+        name: Win MSVC
+
+    deploy:
+      - provider: GitHub
+        tag: $(appveyor_repo_tag_name)
+        release: version $(release_version) ($(appveyor_repo_tag_name))
+        description: ""
+        auth_token:
+          secure: MN+9V2MsM0CDeC+gNzC3wKuLaRn64LnonRjHdVZf9WSm9Oh/z+PO4PpK1ysJLZsP
+        artifact: pigz
+        draft: false
+        prerelease: false
+        on:
+          branch: master
+          appveyor_repo_tag: true
+
+  # Windows (MinGW)
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2015
+
+    clone_folder: c:\projects\pigz
+
+    clone_depth: 1
+
+    init:
+      - ps: >-
+          $env:DATE = $(Get-Date -Format d-MMM-yyyy)
+
+          $githash = $env:APPVEYOR_REPO_COMMIT.Substring(0, 7)
+
+          $gittag = if ($env:APPVEYOR_REPO_TAG -eq $True) {"_$($env:APPVEYOR_REPO_TAG_NAME)"} else {""}
+
+          Update-AppveyorBuild -Version "$($env:DATE)_g${githash}${gittag}"
+
+          $env:release_version = $(Get-Date -Format d-MMMM-yyyy)
+
+    build_script:
+      - cmd: >-
+          echo "Running cmake"
+
+          mkdir c:\projects\pigz\build
+
+          cd c:\projects\pigz\build
+
+          set "PATH=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;%PATH%"
+
+          set "CC=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe"
+
+          set "CXX=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe"
+
+          cmake -Wno-dev -DCMAKE_BUILD_TYPE=Release ..\
+
+          cmake --build .
+
+    after_build:
+    - ps: >-
+        cd c:\projects\dcm2niix
+
+        7z a dcm2niix_win.zip c:\projects\dcm2niix\build\bin\* >$null
+
+    artifacts:
+      - path: build/bin/pigz.exe
+        name: Win MinGW
+
+    deploy:
+      - provider: GitHub
+        tag: $(appveyor_repo_tag_name)
+        release: version $(release_version) ($(appveyor_repo_tag_name))
+        description: ""
+        auth_token:
+          secure: MN+9V2MsM0CDeC+gNzC3wKuLaRn64LnonRjHdVZf9WSm9Oh/z+PO4PpK1ysJLZsP
+        artifact: pigz
+        draft: false
+        prerelease: false
+        on:
+          branch: master
+          appveyor_repo_tag: true
